@@ -1,0 +1,6 @@
+{
+  "name": "My Walkie",
+  "description": "Real-time Push-to-Talk Walkie Talkie app for private and group voice communication over Wi-Fi and mobile data.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

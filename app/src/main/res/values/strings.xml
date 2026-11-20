@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">My Walkie</string>
+    <string name="brand_wordmark">MY WALKIE</string>
+    <string name="brand_tagline">Instant Push-to-Talk over 4G, 5G &amp; Wi-Fi</string>
+    <string name="sign_in_google">Sign in with Google</string>
+    <string name="sign_out">Sign Out</string>
+    <string name="ptt_hold_to_talk">HOLD TO TALK</string>
+    <string name="ptt_transmitting">TRANSMITTING</string>
+    <string name="ptt_requesting">ACQUIRING FLOOR…</string>
+    <string name="ptt_busy">CHANNEL BUSY</string>
+    <string name="ptt_disconnected">CONNECT A CHANNEL</string>
+    <string name="mic_permission_required">Microphone permission is required for Push-to-Talk voice.</string>
+    <string name="grant_mic_permission">Grant Microphone</string>
+    <string name="reconnect">Reconnect</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="channel_notification_title">My Walkie Active</string>
+    <string name="backend_setup_required">LiveKit Token &amp; Floor Control server URL is not configured yet.</string>
+</resources>

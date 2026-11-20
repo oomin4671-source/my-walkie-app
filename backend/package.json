@@ -1,0 +1,17 @@
+{
+  "name": "my-walkie-backend",
+  "version": "1.0.0",
+  "description": "Server-authorized LiveKit token issuer and Push-to-Talk floor control service for MY WALKIE.",
+  "main": "server.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "firebase-admin": "^13.0.2",
+    "livekit-server-sdk": "^2.9.1"
+  }
+}

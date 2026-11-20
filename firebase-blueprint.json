@@ -1,0 +1,229 @@
+{
+  "entities": {
+    "UserPrivate": {
+      "title": "UserPrivate",
+      "description": "Private user account preferences and PII isolated to the owner.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated Firebase UID matching document ID."
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address (PII, owner-only)."
+        },
+        "hapticsEnabled": {
+          "type": "boolean",
+          "description": "Whether haptic feedback is enabled on PTT press and release."
+        },
+        "autoJoinAudio": {
+          "type": "boolean",
+          "description": "Whether audio playback is enabled automatically on room entry."
+        },
+        "backendUrl": {
+          "type": "string",
+          "description": "Custom Walkie token/floor control backend base URL override."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "hapticsEnabled", "autoJoinAudio", "createdAt", "updatedAt"]
+    },
+    "PublicProfile": {
+      "title": "PublicProfile",
+      "description": "Public walkie-talkie operator profile and online presence (no PII).",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated Firebase UID."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Operator display name (1..50 chars)."
+        },
+        "callsign": {
+          "type": "string",
+          "description": "Short tactical callsign (2..24 chars)."
+        },
+        "statusMessage": {
+          "type": "string",
+          "description": "Short status line (0..120 chars)."
+        },
+        "avatarColorHex": {
+          "type": "string",
+          "description": "Hex accent color for operator badge."
+        },
+        "photoUrl": {
+          "type": "string",
+          "description": "Profile avatar URL."
+        },
+        "onlineStatus": {
+          "type": "string",
+          "enum": ["ONLINE", "IN_CHANNEL", "BUSY", "OFFLINE"],
+          "description": "Current operator availability status."
+        },
+        "activeRoomId": {
+          "type": "string",
+          "description": "Currently connected room ID if in a channel."
+        },
+        "discoverable": {
+          "type": "boolean",
+          "description": "Whether operator appears in Private Talk directory."
+        },
+        "lastSeenAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last heartbeat."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "callsign",
+        "statusMessage",
+        "onlineStatus",
+        "discoverable",
+        "lastSeenAt",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WalkieRoom": {
+      "title": "WalkieRoom",
+      "description": "Private 1-on-1 or Group walkie-talkie channel.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Channel display name (1..60 chars)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional channel description (0..160 chars)."
+        },
+        "roomType": {
+          "type": "string",
+          "enum": ["PRIVATE", "GROUP"],
+          "description": "One-to-one private channel or multi-user group channel."
+        },
+        "joinCode": {
+          "type": "string",
+          "description": "6-character uppercase alphanumeric invite code (or DM tag for private rooms)."
+        },
+        "livekitRoomName": {
+          "type": "string",
+          "description": "Unique LiveKit SFU room identifier."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "UID of the creator."
+        },
+        "memberUids": {
+          "type": "string",
+          "description": "Bounded array of member UIDs (max 50 for GROUP, max 2 for PRIVATE)."
+        },
+        "maxParticipants": {
+          "type": "integer",
+          "description": "Maximum allowed participants (2 for PRIVATE, up to 50 for GROUP)."
+        },
+        "activeSpeakerId": {
+          "type": "string",
+          "description": "UID of current floor holder."
+        },
+        "activeSpeakerName": {
+          "type": "string",
+          "description": "Display name of current floor holder."
+        },
+        "floorUpdatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when floor state changed."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "name",
+        "roomType",
+        "joinCode",
+        "livekitRoomName",
+        "ownerId",
+        "memberUids",
+        "maxParticipants",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "RoomInvite": {
+      "title": "RoomInvite",
+      "description": "Invite code lookup record for joining group rooms by code without listing all rooms.",
+      "type": "object",
+      "properties": {
+        "roomId": {
+          "type": "string",
+          "description": "Target room document ID."
+        },
+        "roomName": {
+          "type": "string",
+          "description": "Room display name."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "UID of room owner."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["roomId", "roomName", "ownerId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserPrivate" },
+      "description": "Owner-isolated private user settings and email."
+    },
+    "/public_profiles/{userId}": {
+      "schema": { "$ref": "#/entities/PublicProfile" },
+      "description": "Public operator profiles and online status without PII."
+    },
+    "/rooms/{roomId}": {
+      "schema": { "$ref": "#/entities/WalkieRoom" },
+      "description": "Private 1-on-1 and Group walkie-talkie channels scoped by memberUids."
+    },
+    "/room_invites/{joinCode}": {
+      "schema": { "$ref": "#/entities/RoomInvite" },
+      "description": "Direct get-only lookup mapping 6-char room codes to roomId."
+    }
+  }
+}

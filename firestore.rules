@@ -1,0 +1,210 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net: default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserPrivate(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.hapticsEnabled is bool &&
+             data.autoJoinAudio is bool &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 200)) &&
+             (!('backendUrl' in data) || (data.backendUrl is string && data.backendUrl.size() <= 500)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidPublicProfile(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 50 &&
+             data.callsign is string && data.callsign.size() >= 2 && data.callsign.size() <= 24 &&
+             data.statusMessage is string && data.statusMessage.size() <= 120 &&
+             data.onlineStatus in ['ONLINE', 'IN_CHANNEL', 'BUSY', 'OFFLINE'] &&
+             data.discoverable is bool &&
+             (!('avatarColorHex' in data) || (data.avatarColorHex is string && data.avatarColorHex.size() <= 16)) &&
+             (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 500)) &&
+             (!('activeRoomId' in data) || (data.activeRoomId is string && data.activeRoomId.size() <= 128)) &&
+             data.lastSeenAt is timestamp && data.lastSeenAt <= request.time &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidRoom(data) {
+      return data.name is string && data.name.size() >= 1 && data.name.size() <= 60 &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 160)) &&
+             data.roomType in ['PRIVATE', 'GROUP'] &&
+             data.joinCode is string && data.joinCode.size() >= 2 && data.joinCode.size() <= 12 &&
+             data.livekitRoomName is string && data.livekitRoomName.size() >= 1 && data.livekitRoomName.size() <= 128 &&
+             data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+             data.memberUids is list &&
+             data.memberUids.size() >= 1 &&
+             data.memberUids.size() <= 50 &&
+             data.memberUids[0] is string &&
+             data.maxParticipants is int &&
+             data.maxParticipants >= 2 &&
+             data.maxParticipants <= 50 &&
+             (data.roomType != 'PRIVATE' || (data.maxParticipants == 2 && data.memberUids.size() <= 2)) &&
+             (!('activeSpeakerId' in data) || (data.activeSpeakerId is string && data.activeSpeakerId.size() <= 128)) &&
+             (!('activeSpeakerName' in data) || (data.activeSpeakerName is string && data.activeSpeakerName.size() <= 60)) &&
+             (!('floorUpdatedAt' in data) || (data.floorUpdatedAt is timestamp && data.floorUpdatedAt <= request.time)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidRoomInvite(data) {
+      return data.roomId is string && isValidId(data.roomId) &&
+             data.roomName is string && data.roomName.size() >= 1 && data.roomName.size() <= 60 &&
+             data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    // 1. Private user settings & PII (strictly owner-only)
+    match /users/{userId} {
+      allow get, list: if isSignedIn() && request.auth.uid == userId;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll(['userId', 'hapticsEnabled', 'autoJoinAudio', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'email', 'hapticsEnabled', 'autoJoinAudio', 'backendUrl', 'createdAt', 'updatedAt']) &&
+                       isValidUserPrivate(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       isValidUserPrivate(incoming()) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['email', 'hapticsEnabled', 'autoJoinAudio', 'backendUrl', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+    }
+
+    // 2. Public operator profiles & online status (NO PII)
+    match /public_profiles/{userId} {
+      allow get: if isSignedIn() && isValidId(userId);
+      allow list: if isSignedIn() && existing().discoverable == true;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll(['userId', 'displayName', 'callsign', 'statusMessage', 'onlineStatus', 'discoverable', 'lastSeenAt', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'displayName', 'callsign', 'statusMessage', 'avatarColorHex', 'photoUrl', 'onlineStatus', 'activeRoomId', 'discoverable', 'lastSeenAt', 'createdAt', 'updatedAt']) &&
+                       isValidPublicProfile(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       isValidPublicProfile(incoming()) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'callsign', 'statusMessage', 'avatarColorHex',
+                         'photoUrl', 'onlineStatus', 'activeRoomId', 'discoverable',
+                         'lastSeenAt', 'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+    }
+
+    // 3. Walkie-Talkie Rooms (Private 1-on-1 & Group Talk)
+    match /rooms/{roomId} {
+      allow get: if isSignedIn() && isValidId(roomId) && request.auth.uid in existing().memberUids;
+      allow list: if isSignedIn() && request.auth.uid in existing().memberUids;
+
+      allow create: if isSignedIn() &&
+                       isValidId(roomId) &&
+                       incoming().ownerId == request.auth.uid &&
+                       request.auth.uid in incoming().memberUids &&
+                       incoming().keys().hasAll(['name', 'roomType', 'joinCode', 'livekitRoomName', 'ownerId', 'memberUids', 'maxParticipants', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['name', 'description', 'roomType', 'joinCode', 'livekitRoomName', 'ownerId', 'memberUids', 'maxParticipants', 'activeSpeakerId', 'activeSpeakerName', 'floorUpdatedAt', 'createdAt', 'updatedAt']) &&
+                       isValidRoom(incoming()) &&
+                       (
+                         incoming().roomType == 'PRIVATE' ||
+                         existsAfter(/databases/$(database)/documents/room_invites/$(incoming().joinCode))
+                       );
+
+      allow update: if isSignedIn() &&
+                       isValidId(roomId) &&
+                       isValidRoom(incoming()) &&
+                       incoming().ownerId == existing().ownerId &&
+                       incoming().roomType == existing().roomType &&
+                       incoming().joinCode == existing().joinCode &&
+                       incoming().livekitRoomName == existing().livekitRoomName &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         // Action 1: Owner edits room metadata
+                         (
+                           existing().ownerId == request.auth.uid &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'updatedAt'])
+                         ) ||
+                         // Action 2: User joins a GROUP room using a valid invite code
+                         (
+                           existing().roomType == 'GROUP' &&
+                           !(request.auth.uid in existing().memberUids) &&
+                           request.auth.uid in incoming().memberUids &&
+                           incoming().memberUids.hasAll(existing().memberUids) &&
+                           incoming().memberUids.size() == existing().memberUids.size() + 1 &&
+                           incoming().memberUids.size() <= existing().maxParticipants &&
+                           exists(/databases/$(database)/documents/room_invites/$(existing().joinCode)) &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['memberUids', 'updatedAt'])
+                         ) ||
+                         // Action 3: Non-owner member leaves a GROUP room
+                         (
+                           existing().roomType == 'GROUP' &&
+                           existing().ownerId != request.auth.uid &&
+                           request.auth.uid in existing().memberUids &&
+                           !(request.auth.uid in incoming().memberUids) &&
+                           existing().memberUids.hasAll(incoming().memberUids) &&
+                           incoming().memberUids.size() == existing().memberUids.size() - 1 &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['memberUids', 'updatedAt'])
+                         ) ||
+                         // Action 4: Member updates floor speaker indicator metadata
+                         (
+                           request.auth.uid in existing().memberUids &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['activeSpeakerId', 'activeSpeakerName', 'floorUpdatedAt', 'updatedAt'])
+                         )
+                       );
+
+      allow delete: if isSignedIn() && isValidId(roomId) && existing().ownerId == request.auth.uid;
+    }
+
+    // 4. Direct-get room invite lookup (listing disabled to prevent scraping)
+    match /room_invites/{joinCode} {
+      allow get: if isSignedIn() && isValidId(joinCode);
+      allow list: if false;
+
+      allow create: if isSignedIn() &&
+                       isValidId(joinCode) &&
+                       incoming().ownerId == request.auth.uid &&
+                       incoming().keys().hasAll(['roomId', 'roomName', 'ownerId', 'createdAt']) &&
+                       incoming().keys().hasOnly(['roomId', 'roomName', 'ownerId', 'createdAt']) &&
+                       isValidRoomInvite(incoming()) &&
+                       existsAfter(/databases/$(database)/documents/rooms/$(incoming().roomId));
+
+      allow update: if false;
+      allow delete: if isSignedIn() && isValidId(joinCode) && existing().ownerId == request.auth.uid;
+    }
+  }
+}
